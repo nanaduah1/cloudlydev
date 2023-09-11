@@ -1,0 +1,8 @@
+root: ./lambdas
+python_version: 3.11
+routes:
+  - path: hello/hello
+    url: /hello
+    method: GET
+    handler: handler.handler
+    # venv: hello/.venv

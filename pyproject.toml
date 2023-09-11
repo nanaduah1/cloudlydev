@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "cloudlydev"
+version = "0.1.0"
+description = ""
+authors = ["Nana Duah <gabano2005@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+bottle = "^0.12.25"
+pyyaml = "^6.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+cloudlydev = "cloudlydev.main:main"
+
+[tool.setuptools.packages.find]
+where = "src"
