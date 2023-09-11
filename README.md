@@ -25,6 +25,18 @@ poetry run cloudlydev init
 ```
 This will create a `Cloudlyfile.yml` file in the root of your project. Open it and update the `Cloudlyfile.yml` file to match your project.
 
+# Cloudlyfile.yml
+```yaml
+root: lambdas
+# python_version: 3.9
+routes:
+  - path: hello/hello
+    url: /hello/<name:path>
+    method: GET
+    handler: handler.handler
+    # venv: hello/.venv
+```
+
 3. Create VSCode launch configuration
 
 ```json
@@ -85,5 +97,8 @@ The method is the HTTP method that will be used to match the route. The method c
 routes:
   - path: /hello/<name:path>
     method: GET
+    handler: hello
+  - path: /api/students/<studentId:int>
+    method: POST
     handler: hello
 ```
