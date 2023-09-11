@@ -82,7 +82,7 @@ class DevServer:
                 "headers": dict(request.headers),
                 "queryStringParameters": dict(request.query),
                 "body": body,
-                "pathParameters": kwargs.get("path", {}),
+                "pathParameters": {**kwargs},
             }
 
             results = handler(event, {})
