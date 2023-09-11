@@ -20,3 +20,5 @@ cloudlydev = "cloudlydev.main:main"
 
 [tool.setuptools.packages.find]
 where = "src"
+include = ["cloudlydev", "cloudlydev.*"]
+exlude = ["tests", "tests.*", "lambdas", "lambdas.*"]

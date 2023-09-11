@@ -1,8 +1,14 @@
-root: ./lambdas
-python_version: 3.11
+root: /Users/nanaduah/Desktop/projects.nosync/forkin/src/apis
+# python_version: 3.9
 routes:
-  - path: hello/hello
-    url: /hello
-    method: GET
+  # - path: hello/hello
+  #   url: /hello
+  #   method: GET
+  #   handler: handler.handler
+  #   # venv: hello/.venv
+
+  - path: pickup/createPickup/createpickup
+    url: /api/pickups<clientId:path>/<city:path>
+    method: POST
     handler: handler.handler
-    # venv: hello/.venv
+    # python_version: 3.9

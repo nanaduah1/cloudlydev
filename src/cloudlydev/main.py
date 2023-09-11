@@ -8,15 +8,16 @@ from bottle import request, run, Bottle, response
 
 
 class LambdaImporter:
-    def load_handler(self, config, root="lambdas"):
+    def load_handler(self, config, root="lambdas", python_version="3.11"):
         handler = config["handler"]
         function_path = config["path"]
-        python_version = config.get("python_version", "3.11")
+        python_version = config.get("python_version", python_version)
         module_name, func_name = handler.split(".")
         package = os.path.abspath(
             os.path.dirname(os.path.join(root, function_path, module_name + ".py"))
         )
         sys.path.insert(0, package)
+        sys.path.insert(0, os.path.dirname(package))
 
         # We shoud also add the venv site-packages to the path
         venv = config.get("venv")
@@ -51,7 +52,11 @@ class DevServer:
             lambda_importer = LambdaImporter()
             print("Mapping routes... from ", kwargs["config"])
             for route in self._config["routes"]:
-                handler = lambda_importer.load_handler(route, root=self._config["root"])
+                handler = lambda_importer.load_handler(
+                    route,
+                    root=self._config["root"],
+                    python_version=self._config.get("python_version", "3.11"),
+                )
                 self._app.route(
                     route["url"], route["method"], self._bind_to_lambda(handler)
                 )
