@@ -66,12 +66,30 @@ class DevServer:
 
     def run(self):
         self._app.route("/", "GET", self.handle_request)
+        self._app.route("/<:re:.*>", "OPTIONS", self._handle_cors_request)
         run(self._app, host=self._host, port=self._port, debug=True, reloader=True)
 
     def handle_request(self, *args, **kwargs):
         return (
             "<html><body><h1>Cloudlydev</h1><p>Cloudlydev is running</p></body></html>"
         )
+
+    def _handle_cors_request(self, *args, **kwargs):
+        self._set_common_headers_()
+        return ""
+
+    def _set_common_headers_(self):
+        response.set_header("Server", "Cloudly Dev Server")
+        response.set_header("Access-Control-Allow-Origin", "*")
+        response.set_header("Access-Control-Allow-Headers", "*")
+        response.set_header("Access-Control-Allow-Methods", "*")
+        response.set_header("Access-Control-Allow-Credentials", "true")
+        response.set_header("Access-Control-Max-Age", "86400")
+        response.set_header("Access-Control-Expose-Headers", "*")
+        response.set_header("Vary", "Origin")
+        response.set_header("Vary", "Access-Control-Request-Method")
+        response.set_header("Vary", "Access-Control-Request-Headers")
+        response.set_header("Content-Type", "application/json")
 
     def _bind_to_lambda(self, handler):
         def _handler(*args, **kwargs):
@@ -89,7 +107,7 @@ class DevServer:
             status_code = results.get("statusCode", 200)
             response.status = status_code
 
-            response.set_header("Server", "Cloudly Dev Server")
+            self._set_common_headers_()
             for k, v in results.get("headers", {}).items():
                 response.headers.append(k, v)
 
