@@ -60,7 +60,7 @@ class DevServer:
                 self._app.route(
                     route["url"], route["method"], self._bind_to_lambda(handler)
                 )
-                print(f"Route {route['url']} mapped to {route['handler']}")
+                print(f"Mapped {route['method']} {route['url']} to {route['handler']}")
         except Exception as e:
             print("ERROR", e)
 
