@@ -1,14 +1,20 @@
-root: /Users/nanaduah/Desktop/projects.nosync/forkin/src/apis
+root: lambdas
 # python_version: 3.9
 routes:
-  # - path: hello/hello
-  #   url: /hello
-  #   method: GET
-  #   handler: handler.handler
-  #   # venv: hello/.venv
-
-  - path: pickup/createPickup/createpickup
-    url: /api/pickups<clientId:path>/<city:path>
-    method: POST
+  - path: hello/hello
+    url: /hello/<name:path>
+    method: GET
     handler: handler.handler
-    # python_version: 3.9
+    # venv: hello/.venv
+
+  - path: hello/hello
+    url: /api/gif/<id:int>
+    method: GET
+    handler: gif.handler
+    # venv: hello/.venv
+
+  # - path: pickup/createPickup/createpickup
+  #   url: /api/pickups<clientId:path>/<city:path>
+  #   method: POST
+  #   handler: handler.handler
+  # python_version: 3.9
