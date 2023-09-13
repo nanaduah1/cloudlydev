@@ -103,9 +103,11 @@ class DevServer:
                 "httpMethod": request.method,
                 "headers": dict(request.headers),
                 "queryStringParameters": dict(request.query),
-                "body": body,
                 "pathParameters": {**kwargs},
             }
+
+            if body:
+                event["body"] = body
 
             results = handler(event, {})
             status_code = results.get("statusCode", 200)
