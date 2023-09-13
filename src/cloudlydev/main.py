@@ -66,7 +66,6 @@ class DevServer:
 
     def run(self):
         self._app.route("/", "GET", self.handle_request)
-        self._app.route("/<:re:.*>", "OPTIONS", self._handle_cors_request)
         run(self._app, host=self._host, port=self._port, debug=True, reloader=True)
 
     def handle_request(self, *args, **kwargs):
@@ -93,6 +92,9 @@ class DevServer:
 
     def _bind_to_lambda(self, handler):
         def _handler(*args, **kwargs):
+            if request.method == "OPTIONS":
+                return self._handle_cors_request(*args, **kwargs)
+
             body = request.body.read().decode("utf-8")
             event = {
                 "path": request.path,
