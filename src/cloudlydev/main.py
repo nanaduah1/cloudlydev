@@ -13,11 +13,18 @@ class LambdaImporter:
         function_path = config["path"]
         python_version = config.get("python_version", python_version)
         module_name, func_name = handler.split(".")
+        package_name = os.path.basename(
+            os.path.dirname(os.path.join(root, function_path, module_name + ".py"))
+        )
         package = os.path.abspath(
             os.path.dirname(os.path.join(root, function_path, module_name + ".py"))
         )
-        sys.path.insert(0, package)
-        sys.path.insert(0, os.path.dirname(package))
+
+        if package not in sys.path:
+            sys.path.insert(0, package)
+
+        if os.path.dirname(package) not in sys.path:
+            sys.path.insert(0, os.path.dirname(package))
 
         # We shoud also add the venv site-packages to the path
         venv = config.get("venv")
@@ -30,11 +37,15 @@ class LambdaImporter:
                 "site-packages",
             )
 
-        if os.path.exists(venv):
+        if os.path.exists(venv) and venv not in sys.path:
             sys.path.insert(0, venv)
 
-        module = importlib.import_module(module_name, package=package)
-        return getattr(module, func_name)
+        importlib.invalidate_caches()
+        module_qualname = f"{package_name}.{module_name}"
+        module = importlib.import_module(module_qualname, package=package)
+        fn = getattr(module, func_name)
+
+        return fn
 
 
 class DevServer:
