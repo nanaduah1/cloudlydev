@@ -58,7 +58,9 @@ class DevServer:
                     python_version=self._config.get("python_version", "3.11"),
                 )
                 self._app.route(
-                    route["url"], route["method"], self._bind_to_lambda(handler)
+                    route["url"],
+                    method=(route["method"], "OPTIONS"),
+                    callback=self._bind_to_lambda(handler),
                 )
                 print(f"Mapped {route['method']} {route['url']} to {route['handler']}")
         except Exception as e:
