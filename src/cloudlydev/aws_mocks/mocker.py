@@ -1,11 +1,14 @@
-import botocore
 from cloudlydev.aws_mocks.mocks.cognito import CognitoIdentityProvider
 
-mocked = {botocore.client.CognitoIdentityProvider: CognitoIdentityProvider}
+mocked = {
+    "CognitoIdentityProvider": CognitoIdentityProvider,
+}
 
 
-def mock_for(cls, method, kwargs):
-    if cls in mocked:
-        return mocked[cls](kwargs.get("dev_config", {})).mock(method, **kwargs)
+def mock_for(cls, method, original, config, **kwargs):
+    cls_name = cls.__class__.__name__
+
+    if cls_name in mocked:
+        return mocked[cls_name](config or {}).mock(method, **kwargs)
     else:
-        return {}
+        return original(cls, method, kwargs)

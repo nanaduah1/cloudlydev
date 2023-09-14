@@ -110,9 +110,20 @@ class DevServer:
     def _bind_to_lambda(self, handler):
         this = self
 
-        def mock_api_call(self, operation_name, kwarg):
-            return mock_for(self, operation_name, dev_config=this._config, **kwarg)
+        # We need to keep a reference to the original make_api_call
+        # so we can call it from our mock for cases where we don't want to mock
+        original_make_api_call = botocore.client.BaseClient._make_api_call
 
+        def mock_api_call(self, operation_name, kwarg):
+            return mock_for(
+                self,
+                operation_name,
+                original_make_api_call,
+                config=this._config,
+                **kwarg,
+            )
+
+        # This intercepts all calls to boto3 and replaces them with our mock
         @patch("botocore.client.BaseClient._make_api_call", new=mock_api_call)
         def _handler(*args, **kwargs):
             if request.method == "OPTIONS":
