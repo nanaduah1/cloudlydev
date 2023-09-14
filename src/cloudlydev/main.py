@@ -1,10 +1,14 @@
 import os
 import sys
+from unittest.mock import patch
 import yaml
 import importlib
+import botocore
+
 from argparse import ArgumentParser
 
 from bottle import request, run, Bottle, response
+from cloudlydev.aws_mocks.mocker import mock_for
 
 
 class LambdaImporter:
@@ -104,17 +108,40 @@ class DevServer:
         response.set_header("Content-Type", "application/json")
 
     def _bind_to_lambda(self, handler):
+        this = self
+
+        def mock_api_call(self, operation_name, kwarg):
+            return mock_for(self, operation_name, dev_config=this._config, **kwarg)
+
+        @patch("botocore.client.BaseClient._make_api_call", new=mock_api_call)
         def _handler(*args, **kwargs):
             if request.method == "OPTIONS":
                 return self._handle_cors_request(*args, **kwargs)
 
+            user = self._config.get("user")
             body = request.body.read().decode("utf-8")
             event = {
                 "path": request.path,
                 "httpMethod": request.method,
-                "headers": dict(request.headers),
+                "headers": {k.lower(): v for k, v in dict(request.headers).items()},
                 "queryStringParameters": dict(request.query),
                 "pathParameters": {**kwargs},
+                "requestContext": {
+                    "authorizer": {
+                        "jwt": {
+                            "claims": {
+                                "cognito:groups": f'[{" ".join(user.get("groups", []))}]',
+                                "username": user.get("username"),
+                                "client_id": self._config.get(
+                                    "client_id", "testclientid"
+                                ),
+                            }
+                        }
+                    },
+                    "accountId": "123456789012",
+                    "http": {"sourceIp": request.remote_addr},
+                    "path": request.path,
+                },
             }
 
             if body:
