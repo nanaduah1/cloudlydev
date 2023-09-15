@@ -28,13 +28,19 @@ def reset_db(config, force=False):
         try_delete_db(table_def["name"])
 
     print(f"Creating table {table_def['name']}")
-    dynamodb.create_table(
-        TableName=table_def["name"],
-        KeySchema=key_schema,
-        AttributeDefinitions=attr_defs,
-        BillingMode="PAY_PER_REQUEST",
-        GlobalSecondaryIndexes=indexes,
-    )
+
+    # Create the DynamoDB table if it doesn't exist
+    try:
+        dynamodb.create_table(
+            TableName=table_def["name"],
+            KeySchema=key_schema,
+            AttributeDefinitions=attr_defs,
+            BillingMode="PAY_PER_REQUEST",
+            GlobalSecondaryIndexes=indexes,
+        )
+        print(f"{table_def['name']} created!")
+    except dynamodb.meta.client.exceptions.ResourceInUseException:
+        print(f"{table_def['name']} already exists!")
 
 
 def try_delete_db(table_name):
