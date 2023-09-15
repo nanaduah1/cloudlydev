@@ -5,7 +5,7 @@ import boto3
 dynamodb = boto3.resource("dynamodb", endpoint_url="http://localhost:8000")
 
 
-def reset_db(config):
+def reset_db(config, force=False):
     table_def = config["table"]
     pk, sk = table_def["key"]
     gsi = table_def.get("indexes", [])
@@ -24,7 +24,8 @@ def reset_db(config):
 
     indexes = create_indexes_params(gsi, attr_defs)
 
-    try_delete_db(table_def["name"])
+    if force:
+        try_delete_db(table_def["name"])
 
     print(f"Creating table {table_def['name']}")
     dynamodb.create_table(

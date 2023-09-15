@@ -209,6 +209,7 @@ def build_args(parser: ArgumentParser):
     parser.add_argument("--config", type=str, default="Cloudlyfile.yml")
     parser.add_argument("--table", type=str, default="")
     parser.add_argument("--file", type=str, default="data.yml")
+    parser.add_argument("--force", type=bool, default=False)
 
     return parser.parse_args()
 
@@ -220,13 +221,15 @@ def initialize_lambdas(config):
 
     # Change poetry to use local venvs
     os.system("poetry config virtualenvs.in-project true")
-
+    root = os.path.abspath(config["root"])
     for route in config["routes"]:
-        lambda_path = os.path.join(config["root"], route["path"])
+        lambda_path = os.path.join(root, route["path"])
+        print("Initializing lambda", lambda_path)
         if os.path.exists(lambda_path):
             print(f"Initializing lambda {lambda_path}")
             os.chdir(lambda_path)
             os.system("poetry update")
+        print("Done!")
 
 
 def init(**kwargs):
@@ -268,7 +271,7 @@ def main():
     elif args.command == "initdb":
         from cloudlydev.createtable import reset_db
 
-        reset_db(_parse_config(args.config))
+        reset_db(_parse_config(args.config), force=args.force)
     elif args.command == "loaddata":
         from cloudlydev.createtable import load_data
 
