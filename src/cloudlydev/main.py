@@ -200,7 +200,7 @@ def build_args(parser: ArgumentParser):
             "runserver",
             "initdb",
             "loaddata",
-            "build",
+            "initlambda",
             "init",
         ],
     )
@@ -277,7 +277,7 @@ def main():
         load_data(args.table, data.get("records", []))
         print("Done!")
 
-    elif args.command == "build":
+    elif args.command == "initlambda":
         initialize_lambdas(_parse_config(args.config))
     else:
         print(f"Unknown command {args.command}")
