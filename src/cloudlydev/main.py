@@ -191,7 +191,19 @@ class DevServer:
 
 
 def build_args(parser: ArgumentParser):
-    parser.add_argument("-c", type=str, default="runserver", dest="command")
+    parser.add_argument(
+        "-c",
+        type=str,
+        default="runserver",
+        dest="command",
+        choices=[
+            "runserver",
+            "initdb",
+            "loaddata",
+            "build",
+            "init",
+        ],
+    )
     parser.add_argument("--host", type=str, default="localhost")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--config", type=str, default="Cloudlyfile.yml")
@@ -199,6 +211,22 @@ def build_args(parser: ArgumentParser):
     parser.add_argument("--file", type=str, default="data.yml")
 
     return parser.parse_args()
+
+
+def initialize_lambdas(config):
+    """
+    Run poetry install in each lambda folder based on all the registered lambdas
+    """
+
+    # Change poetry to use local venvs
+    os.system("poetry config virtualenvs.in-project true")
+
+    for route in config["routes"]:
+        lambda_path = os.path.join(config["root"], route["path"])
+        if os.path.exists(lambda_path):
+            print(f"Initializing lambda {lambda_path}")
+            os.chdir(lambda_path)
+            os.system("poetry update")
 
 
 def init(**kwargs):
@@ -214,9 +242,13 @@ def init(**kwargs):
 
     """
 
-    with open(kwargs["config"], "w") as f:
-        f.write(sample_config)
-        print(f"Created sample config file at {kwargs['config']}")
+    # Create sample config file if it doesn't exist
+    if not os.path.exists(kwargs["config"]):
+        with open(kwargs["config"], "w") as f:
+            f.write(sample_config)
+            print(f"Created sample config file at {kwargs['config']}")
+    else:
+        print(f"Config file already exists at {kwargs['config']}")
 
 
 def main():
@@ -244,6 +276,9 @@ def main():
         data = _parse_config(args.file)
         load_data(args.table, data.get("records", []))
         print("Done!")
+
+    elif args.command == "build":
+        initialize_lambdas(_parse_config(args.config))
     else:
         print(f"Unknown command {args.command}")
 
