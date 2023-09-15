@@ -1,20 +1,40 @@
-root: lambdas
+root: /Users/nanaduah/Desktop/projects.nosync/forkin/src/apis
 # python_version: 3.9
 routes:
-  - path: hello/hello
-    url: /hello/<name:path>
+  - path: customer/getCustomer/getcustomer
+    url: /api/customers/<country>
     method: GET
     handler: handler.handler
-    # venv: hello/.venv
+  # - path: hello/hello
+  #   url: /hello/<name:path>
+  #   method: GET
+  #   handler: handler.handler
+  #   # venv: hello/.venv
 
-  - path: hello/hello
-    url: /api/gif/<id:int>
-    method: GET
-    handler: gif.handler
-    # venv: hello/.venv
+  # - path: hello/hello
+  #   url: /api/gif/<id:int>
+  #   method: GET
+  #   handler: gif.handler
+  #   # venv: hello/.venv
 
   # - path: pickup/createPickup/createpickup
   #   url: /api/pickups<clientId:path>/<city:path>
   #   method: POST
   #   handler: handler.handler
   # python_version: 3.9
+
+table:
+  name: forkin-table-33
+  region: us-central-1
+  key:
+    - pk: pk
+      type: S
+    - sk: sk
+      type: S
+  indexes:
+    - name: GSI1
+      key:
+        - pk: gsi1_pk
+          type: S
+        - sk: gsi1_sk
+          type: S

@@ -4,11 +4,19 @@ from unittest.mock import patch
 import yaml
 import importlib
 import botocore
+import boto3
 
 from argparse import ArgumentParser
 
 from bottle import request, run, Bottle, response
 from cloudlydev.aws_mocks.mocker import mock_for
+
+
+def _parse_config(config_path):
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            return yaml.safe_load(f)
+    return {}
 
 
 class LambdaImporter:
@@ -56,7 +64,7 @@ class DevServer:
     def __init__(self, **kwargs):
         self._host = kwargs["host"]
         self._port = kwargs["port"]
-        self._config = self._parse_config(kwargs["config"])
+        self._config = _parse_config(kwargs["config"])
         self._app = Bottle()
 
         self._old_path = sys.path
@@ -170,12 +178,6 @@ class DevServer:
 
         return _handler
 
-    def _parse_config(self, config_path):
-        if os.path.exists(config_path):
-            with open(config_path) as f:
-                return yaml.safe_load(f)
-        return {}
-
     def __enter__(self):
         import sys
 
@@ -196,7 +198,7 @@ def build_args(parser: ArgumentParser):
     return parser.parse_args()
 
 
-def create_config(**kwargs):
+def init(**kwargs):
     sample_config = """
     root: lambdas # root folder for lambdas (required)
     python: 3.11 # python version to use (default 3.11)
@@ -221,13 +223,17 @@ def main():
     args = build_args(parser)
 
     if args.command == "init":
-        create_config(**vars(args))
+        init(**vars(args))
     elif args.command == "runserver":
         with DevServer(**vars(args)) as s:
             try:
                 s.run()
             except KeyboardInterrupt:
                 print("Exiting...")
+    elif args.command == "initdb":
+        from cloudlydev.createtable import reset_db
+
+        reset_db(_parse_config(args.config))
     else:
         print(f"Unknown command {args.command}")
 
