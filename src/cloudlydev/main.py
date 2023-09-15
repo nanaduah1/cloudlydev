@@ -224,12 +224,13 @@ def initialize_lambdas(config):
     root = os.path.abspath(config["root"])
     for route in config["routes"]:
         lambda_path = os.path.join(root, route["path"])
-        print("Initializing lambda", lambda_path)
         if os.path.exists(lambda_path):
             print(f"Initializing lambda {lambda_path}")
             os.chdir(lambda_path)
             os.system("poetry update")
-        print("Done!")
+            print("Done!")
+        else:
+            print(f"Lambda path {lambda_path} does not exist")
 
 
 def init(**kwargs):
