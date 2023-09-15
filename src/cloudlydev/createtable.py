@@ -1,4 +1,8 @@
+from decimal import Decimal
 import boto3
+
+
+dynamodb = boto3.resource("dynamodb", endpoint_url="http://localhost:8000")
 
 
 def reset_db(config):
@@ -20,8 +24,7 @@ def reset_db(config):
 
     indexes = create_indexes_params(gsi, attr_defs)
 
-    dynamodb = boto3.resource("dynamodb", endpoint_url="http://localhost:8000")
-    try_delete_db(dynamodb, table_def["name"])
+    try_delete_db(table_def["name"])
 
     print(f"Creating table {table_def['name']}")
     dynamodb.create_table(
@@ -33,9 +36,8 @@ def reset_db(config):
     )
 
 
-def try_delete_db(client, table_name):
+def try_delete_db(table_name):
     print(f"Deleting table {table_name}")
-    dynamodb = client
     try:
         table = dynamodb.Table(table_name)
         table.delete()
@@ -67,3 +69,21 @@ def create_indexes_params(gsi, attr_defs):
         attr_defs.append({"AttributeName": pk["pk"], "AttributeType": pk["type"]})
 
     return indexs
+
+
+def load_data(table_name, data):
+    table = dynamodb.Table(table_name)
+    with table.batch_writer() as batch:
+        for item in data:
+            batch.put_item(Item=_serialize(item))
+
+
+def _serialize(item: dict):
+    for k, v in item.items():
+        if isinstance(v, dict):
+            item[k] = _serialize(v)
+        elif isinstance(v, list):
+            item[k] = [_serialize(i) for i in v]
+        elif isinstance(v, float):
+            item[k] = Decimal(str(v))
+    return item

@@ -195,6 +195,9 @@ def build_args(parser: ArgumentParser):
     parser.add_argument("--host", type=str, default="localhost")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--config", type=str, default="Cloudlyfile.yml")
+    parser.add_argument("--table", type=str, default="")
+    parser.add_argument("--file", type=str, default="data.yml")
+
     return parser.parse_args()
 
 
@@ -234,6 +237,13 @@ def main():
         from cloudlydev.createtable import reset_db
 
         reset_db(_parse_config(args.config))
+    elif args.command == "loaddata":
+        from cloudlydev.createtable import load_data
+
+        print(f"Loading data from {args.file} into {args.table}")
+        data = _parse_config(args.file)
+        load_data(args.table, data.get("records", []))
+        print("Done!")
     else:
         print(f"Unknown command {args.command}")
 
