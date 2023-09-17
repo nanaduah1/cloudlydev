@@ -174,7 +174,7 @@ class DevServer:
             for k, v in results.get("headers", {}).items():
                 response.headers.append(k, v)
 
-            return (results["body"],)
+            return results["body"]
 
         return _handler
 
