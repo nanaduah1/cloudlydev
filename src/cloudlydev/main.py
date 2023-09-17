@@ -23,14 +23,16 @@ class LambdaImporter:
     def load_handler(self, config, root="lambdas", python_version="3.11"):
         handler = config["handler"]
         function_path = config["path"]
+        project_name = os.path.basename(function_path)
         python_version = config.get("python_version", python_version)
+
         module_name, func_name = handler.split(".")
-        package_name = os.path.basename(
-            os.path.dirname(os.path.join(root, function_path, module_name + ".py"))
+        handler_module_path = os.path.join(
+            root, function_path, project_name.lower(), module_name + ".py"
         )
-        package = os.path.abspath(
-            os.path.dirname(os.path.join(root, function_path, module_name + ".py"))
-        )
+
+        package_name = os.path.basename(os.path.dirname(handler_module_path))
+        package = os.path.abspath(os.path.dirname(handler_module_path))
 
         if package not in sys.path:
             sys.path.insert(0, package)
