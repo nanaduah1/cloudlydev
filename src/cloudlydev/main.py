@@ -122,7 +122,7 @@ class DevServer:
             )
 
             try:
-                print(f"Binding {binding['path']}:{binding['handler']} to DynamoDB stream")
+                print(f"Binding {binding['path']} to DynamoDB stream")
                 handler = LambdaImporter().load_handler(
                     binding,
                     root=self._config["root"],
@@ -130,7 +130,7 @@ class DevServer:
                 )
                 bound_handlers.append(handler)
             except Exception as e:
-                print(f"ERROR: {binding['path']}:{binding['handler']} failed to load", e)
+                print(f"ERROR: {binding['path']} failed to load", e)
 
         if not bound_handlers:
             return
@@ -138,7 +138,7 @@ class DevServer:
         poller = DynamoStreamPoller(table["name"])
 
         # Run in a new thread
-        thread = Thread(target=poller.run, args=(bound_handlers,))
+        thread = Thread(target=poller.poll, args=(bound_handlers,))
         thread.start()
 
 
