@@ -26,6 +26,12 @@ routes:
 table:
   name: forkin-table-33
   region: us-central-1
+  stream:
+    view_type: NEW_AND_OLD_IMAGES
+    batch_size: 100
+    bindings:
+      - path: customer/getCustomer
+        handler: handler.handler
   key:
     - pk: pk
       type: S

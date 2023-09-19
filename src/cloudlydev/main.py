@@ -4,12 +4,12 @@ from unittest.mock import patch
 import yaml
 import importlib
 import botocore
-
+from threading import Thread
 from argparse import ArgumentParser
 
 from bottle import request, run, Bottle, response
 from cloudlydev.aws_mocks.mocker import mock_for
-
+from cloudlydev.dynamodb import DynamoStreamPoller
 
 def _parse_config(config_path):
     if os.path.exists(config_path):
@@ -97,7 +97,50 @@ class DevServer:
 
     def run(self):
         self._app.route("/", "GET", self.handle_request)
+        self._start_dynamodb_stream()
         run(self._app, host=self._host, port=self._port, debug=True, reloader=True)
+
+
+    def _start_dynamodb_stream(self):
+        table = self._config.get("table")
+        if not table or not table.get("stream"):
+            return
+        
+        stream_config = table["stream"]
+        if not stream_config.get("enabled"):
+            return
+
+        bindings = stream_config.get("bindings", [])
+        if not bindings:
+            return
+        
+        bound_handlers = []
+        for binding in bindings:
+            py_version = (
+                binding.get("python_version", "3.11") or 
+                self._config.get("python_version", "3.11")
+            )
+
+            try:
+                print(f"Binding {binding['path']}:{binding['handler']} to DynamoDB stream")
+                handler = LambdaImporter().load_handler(
+                    binding,
+                    root=self._config["root"],
+                    python_version=py_version,
+                )
+                bound_handlers.append(handler)
+            except Exception as e:
+                print(f"ERROR: {binding['path']}:{binding['handler']} failed to load", e)
+
+        if not bound_handlers:
+            return
+        
+        poller = DynamoStreamPoller(table["name"])
+
+        # Run in a new thread
+        thread = Thread(target=poller.run, args=(bound_handlers,))
+        thread.start()
+
 
     def handle_request(self, *args, **kwargs):
         return (
@@ -276,11 +319,11 @@ def main():
             except KeyboardInterrupt:
                 print("Exiting...")
     elif args.command == "initdb":
-        from cloudlydev.createtable import reset_db
+        from cloudlydev.dynamodb import reset_db
 
         reset_db(_parse_config(args.config), force=args.force)
     elif args.command == "loaddata":
-        from cloudlydev.createtable import load_data
+        from cloudlydev.dynamodb import load_data
 
         print(f"Loading data from {args.file} into {args.table}")
         data = _parse_config(args.file)
