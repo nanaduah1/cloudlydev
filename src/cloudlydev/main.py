@@ -20,7 +20,7 @@ def _parse_config(config_path):
 
 class LambdaImporter:
     def load_handler(self, config, root="lambdas", python_version="3.11"):
-        handler = config["handler"]
+        handler = config.get("handler") or self.Meta.default_handler
         function_path = config["path"]
         project_name = os.path.basename(function_path)
         python_version = config.get("python_version", python_version)
@@ -59,6 +59,10 @@ class LambdaImporter:
         fn = getattr(module, func_name)
 
         return fn
+    
+    class Meta:
+        default_handler = "handler.handler"
+        
 
 
 class DevServer:
@@ -76,6 +80,7 @@ class DevServer:
             lambda_importer = LambdaImporter()
             print("Mapping routes... from ", kwargs["config"])
             for route in self._config["routes"]:
+                http_method = route.get("method", "GET")
                 handler = lambda_importer.load_handler(
                     route,
                     root=self._config["root"],
@@ -83,7 +88,7 @@ class DevServer:
                 )
                 self._app.route(
                     route["url"],
-                    method=(route["method"], "OPTIONS"),
+                    method=(http_method, "OPTIONS"),
                     callback=self._bind_to_lambda(handler),
                 )
                 print(f"Mapped {route['method']} {route['url']} to {route['handler']}")
