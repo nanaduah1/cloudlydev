@@ -145,7 +145,7 @@ class DynamoDBLocalStream:
     
 
 class DynamoStreamPoller:
-    def __init__(self, table_name, interval=100):
+    def __init__(self, table_name, interval=1000):
         self._table_name = table_name
         self._stream = DynamoDBLocalStream(table_name)
         self._interval = interval
@@ -156,7 +156,6 @@ class DynamoStreamPoller:
         records = self._stream.get_records()
         while self._exit is False:
             records = self._stream.get_records()
-            wait_until = datetime.now() + timedelta(milliseconds=self._interval)
             if len(records) > 0:
                 # Invoke lambda handler with the records
                 for handler in handlers:
@@ -167,7 +166,10 @@ class DynamoStreamPoller:
                         print(f"DynamoDB STREAM: Error invoking {handler.__name__}: {e}")
             
             # sleep until the next poll
-            time.sleep((wait_until - datetime.now()).total_seconds())
+            wait_until = datetime.now() + timedelta(milliseconds=self._interval)
+            wait_period =(wait_until - datetime.now()).total_seconds()
+            if wait_period > 0:
+                time.sleep(wait_period)
             
 
     
