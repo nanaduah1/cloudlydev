@@ -4,7 +4,6 @@ from unittest.mock import patch
 import yaml
 import importlib
 import botocore
-import boto3
 
 from argparse import ArgumentParser
 

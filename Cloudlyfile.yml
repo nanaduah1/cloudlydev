@@ -1,7 +1,7 @@
 root: /Users/nanaduah/Desktop/projects.nosync/forkin/src/apis
 # python_version: 3.9
 routes:
-  - path: customer/getCustomer/getcustomer
+  - path: customer/getCustomer
     url: /api/customers/<country>
     method: GET
     handler: handler.handler
@@ -11,13 +11,13 @@ routes:
   #   handler: handler.handler
   #   # venv: hello/.venv
 
-  # - path: hello/hello
+  # - path: hello
   #   url: /api/gif/<id:int>
   #   method: GET
   #   handler: gif.handler
   #   # venv: hello/.venv
 
-  # - path: pickup/createPickup/createpickup
+  # - path: pickup/createPickup
   #   url: /api/pickups<clientId:path>/<city:path>
   #   method: POST
   #   handler: handler.handler
