@@ -42,14 +42,14 @@ def reset_db(config, force=False):
         StreamSpecification={
             "StreamEnabled": True,
             "StreamViewType": "NEW_AND_OLD_IMAGES",
-        }
+        },
     )
 
     if table_def.get("stream"):
         view_type = table_def["stream"].get("view_type")
         create_params["StreamSpecification"] = {
             "StreamEnabled": True,
-            "StreamViewType": view_type  or  "NEW_AND_OLD_IMAGES",
+            "StreamViewType": view_type or "NEW_AND_OLD_IMAGES",
             "BatchSize": table_def["stream"].get("batch_size") or 100,
         }
     try:
@@ -115,19 +115,23 @@ def _serialize(item: dict):
 class DynamoDBLocalStream:
     def __init__(self, table_name):
         self._table_name = table_name
-        self._client = boto3.client("dynamodbstreams", endpoint_url="http://localhost:8000")
+        self._client = boto3.client(
+            "dynamodbstreams", endpoint_url="http://localhost:8000"
+        )
         self._stream_arn = self._get_stream_arn()
         self._shard_id = self._get_shard_id()
         self._shard_iterator = self._get_shard_iterator()
 
     def _get_stream_arn(self):
         describe_table_response = dynamodb.meta.client.describe_table(
-            TableName=self._table_name)
+            TableName=self._table_name
+        )
         return describe_table_response["Table"]["LatestStreamArn"]
 
     def _get_shard_id(self):
-        describe_stream_response =  self._client.describe_stream(
-            StreamArn=self._stream_arn)
+        describe_stream_response = self._client.describe_stream(
+            StreamArn=self._stream_arn
+        )
         return describe_stream_response["StreamDescription"]["Shards"][0]["ShardId"]
 
     def _get_shard_iterator(self):
@@ -139,10 +143,14 @@ class DynamoDBLocalStream:
         return iterator["ShardIterator"]
 
     def get_records(self):
-        records_in_response = self._client.get_records(
-            ShardIterator=self._shard_iterator, Limit=100)
-        return records_in_response["Records"]
-    
+        try:
+            records_in_response = self._client.get_records(
+                ShardIterator=self._shard_iterator, Limit=100
+            )
+            return records_in_response["Records"]
+        except self._client.exceptions.ExpiredIteratorException:
+            return []
+
 
 class DynamoStreamPoller:
     def __init__(self, table_name, interval=1000):
@@ -151,25 +159,22 @@ class DynamoStreamPoller:
         self._interval = interval
         self._exit = False
 
-
-    def poll(self, handlers:Iterable[Callable[[dict,Any], Any]]):
-        records = self._stream.get_records()
+    def poll(self, handlers: Iterable[Callable[[dict, Any], Any]]):
         while self._exit is False:
             records = self._stream.get_records()
             if len(records) > 0:
                 # Invoke lambda handler with the records
                 for handler in handlers:
                     try:
-                        handler({"Records": records},{})
+                        handler({"Records": records}, {})
                         print(f"DynamoDB STREAM: Invoked handler: {handler.__name__}!")
                     except Exception as e:
-                        print(f"DynamoDB STREAM: Error invoking {handler.__name__}: {e}")
-            
+                        print(
+                            f"DynamoDB STREAM: Error invoking {handler.__name__}: {e}"
+                        )
+
             # sleep until the next poll
             wait_until = datetime.now() + timedelta(milliseconds=self._interval)
-            wait_period =(wait_until - datetime.now()).total_seconds()
+            wait_period = (wait_until - datetime.now()).total_seconds()
             if wait_period > 0:
                 time.sleep(wait_period)
-            
-
-    
