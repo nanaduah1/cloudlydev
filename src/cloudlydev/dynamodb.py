@@ -148,7 +148,10 @@ class DynamoDBLocalStream:
                 ShardIterator=self._shard_iterator, Limit=100
             )
             return records_in_response["Records"]
-        except self._client.exceptions.ExpiredIteratorException:
+        except (
+            self._client.exceptions.ExpiredIteratorException
+            or self._client.exceptions.ResourceNotFoundException
+        ):
             return []
 
 
