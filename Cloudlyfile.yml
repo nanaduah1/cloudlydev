@@ -44,3 +44,8 @@ table:
           type: S
         - sk: gsi1_sk
           type: S
+
+cron:
+  - path: customer/getCustomer
+    handler: handler.handler
+    interval: 1m

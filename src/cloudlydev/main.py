@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import sys
 from unittest.mock import patch
@@ -10,6 +11,8 @@ from argparse import ArgumentParser
 from bottle import request, run, Bottle, response
 from cloudlydev.aws_mocks.mocker import mock_for
 from cloudlydev.dynamodb import DynamoStreamPoller
+from cloudlydev.cron import LambdaCronRunner
+
 
 def _parse_config(config_path):
     if os.path.exists(config_path):
@@ -23,7 +26,7 @@ class LambdaImporter:
         handler = config.get("handler") or self.Meta.default_handler
         function_path = config["path"]
         project_name = os.path.basename(function_path)
-        python_version = config.get("python_version", python_version)
+        python_version = config.get("python_version") or python_version
 
         module_name, func_name = handler.split(".")
         handler_module_path = os.path.join(
@@ -59,10 +62,9 @@ class LambdaImporter:
         fn = getattr(module, func_name)
 
         return fn
-    
+
     class Meta:
         default_handler = "handler.handler"
-        
 
 
 class DevServer:
@@ -98,14 +100,50 @@ class DevServer:
     def run(self):
         self._app.route("/", "GET", self.handle_request)
         self._start_dynamodb_stream()
+        self._start_cron_jobs()
         run(self._app, host=self._host, port=self._port, debug=True, reloader=True)
 
+    def _start_cron_jobs(self):
+        cron = self._config.get("cron", [])
+        if not cron:
+            return
+
+        # Group cron jobs by interval
+        cron_jobs_by_interval = defaultdict(list)
+        for job in cron:
+            cron_jobs_by_interval[job.get("interval", "1m")].append(job)
+
+        for interval, jobs in cron_jobs_by_interval.items():
+            cron_jobs = []
+            for job in jobs:
+                py_version = job.get("python_version", "3.11") or self._config.get(
+                    "python_version", "3.11"
+                )
+
+                try:
+                    print(f"Binding {job['path']} to cron job")
+                    handler = LambdaImporter().load_handler(
+                        job,
+                        root=self._config["root"],
+                        python_version=py_version,
+                    )
+                    cron_jobs.append(handler)
+                except Exception as e:
+                    print(f"ERROR: {job['path']} failed to load", e)
+
+            if not cron_jobs:
+                continue
+
+            # Run in a new thread
+            cron_runner = LambdaCronRunner(handlers=cron_jobs, interval=interval)
+            thread = Thread(target=cron_runner.start)
+            thread.start()
 
     def _start_dynamodb_stream(self):
         table = self._config.get("table")
         if not table or not table.get("stream"):
             return
-        
+
         stream_config = table["stream"]
         if not stream_config.get("enabled"):
             return
@@ -113,12 +151,11 @@ class DevServer:
         bindings = stream_config.get("bindings", [])
         if not bindings:
             return
-        
+
         bound_handlers = []
         for binding in bindings:
-            py_version = (
-                binding.get("python_version", "3.11") or 
-                self._config.get("python_version", "3.11")
+            py_version = binding.get("python_version", "3.11") or self._config.get(
+                "python_version", "3.11"
             )
 
             try:
@@ -134,13 +171,12 @@ class DevServer:
 
         if not bound_handlers:
             return
-        
+
         poller = DynamoStreamPoller(table["name"])
 
         # Run in a new thread
         thread = Thread(target=poller.poll, args=(bound_handlers,))
         thread.start()
-
 
     def handle_request(self, *args, **kwargs):
         return (
@@ -271,7 +307,13 @@ def initialize_lambdas(config):
     # Change poetry to use local venvs
     os.system("poetry config virtualenvs.in-project true")
     root = os.path.abspath(config["root"])
-    for route in config["routes"]:
+    all_lambdas = (
+        config["routes"]
+        + config.get("cron", [])
+        + config.get("stream", {}).get("bindings", [])
+    )
+
+    for route in all_lambdas:
         lambda_path = os.path.join(root, route["path"])
         if os.path.exists(lambda_path):
             print(f"Initializing lambda {lambda_path}")
