@@ -118,9 +118,9 @@ class DynamoDBLocalStream:
         self._client = boto3.client(
             "dynamodbstreams", endpoint_url="http://localhost:8000"
         )
+        self._current_shard = 0
         self._stream_arn = self._get_stream_arn()
-        self._shard_id = self._get_shard_id()
-        self._shard_iterator = self._get_shard_iterator()
+        self._shards = self._get_shards(self._stream_arn)
 
     def _get_stream_arn(self):
         describe_table_response = dynamodb.meta.client.describe_table(
@@ -128,30 +128,33 @@ class DynamoDBLocalStream:
         )
         return describe_table_response["Table"]["LatestStreamArn"]
 
-    def _get_shard_id(self):
-        describe_stream_response = self._client.describe_stream(
-            StreamArn=self._stream_arn
-        )
-        return describe_stream_response["StreamDescription"]["Shards"][0]["ShardId"]
+    def _get_shards(self, stream_arn):
+        describe_stream_response = self._client.describe_stream(StreamArn=stream_arn)
 
-    def _get_shard_iterator(self):
+        return describe_stream_response["StreamDescription"]["Shards"]
+
+    def _get_shard_iterator(self, shard_id=None):
         iterator = self._client.get_shard_iterator(
             StreamArn=self._stream_arn,
-            ShardId=self._shard_id,
+            ShardId=shard_id,
             ShardIteratorType="TRIM_HORIZON",
         )
         return iterator["ShardIterator"]
 
     def get_records(self):
         try:
+            shard_id = self._shards[self._current_shard]["ShardId"]
+            shard_iterator = self._get_shard_iterator(shard_id)
             records_in_response = self._client.get_records(
-                ShardIterator=self._shard_iterator, Limit=100
+                ShardIterator=shard_iterator, Limit=1000
             )
-            return records_in_response["Records"]
-        except (
-            self._client.exceptions.ExpiredIteratorException
-            or self._client.exceptions.ResourceNotFoundException
-        ):
+            records = records_in_response["Records"]
+            if len(records) == 0 and self._current_shard < len(self._shards) - 1:
+                self._current_shard += 1
+                return self.get_records()
+            return records
+        except Exception:
+            self._current_shard += 1
             return []
 
 
