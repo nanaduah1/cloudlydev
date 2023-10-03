@@ -93,7 +93,7 @@ class DevServer:
                     method=(http_method, "OPTIONS"),
                     callback=self._bind_to_lambda(handler),
                 )
-                print(f"Mapped {route['method']} {route['url']} to {route['handler']}")
+                print(f"Mapped {http_method} {route['url']} to {handler.__name__}")
         except Exception as e:
             print("ERROR", e)
 
