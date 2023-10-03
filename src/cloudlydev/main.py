@@ -222,7 +222,7 @@ class DevServer:
             if request.method == "OPTIONS":
                 return self._handle_cors_request(*args, **kwargs)
 
-            user = self._config.get("user")
+            user = self._config.get("user", {})
             body = request.body.read().decode("utf-8")
             event = {
                 "path": request.path,
