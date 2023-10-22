@@ -33,6 +33,11 @@ class LambdaImporter:
             root, function_path, project_name.lower(), module_name + ".py"
         )
 
+        # Check if the module is trule nested using the default poerty structure
+        if not os.path.exists(handler_module_path):
+            # Use the flat folder structure
+            handler_module_path = os.path.join(root, function_path, module_name + ".py")
+
         package_name = os.path.basename(os.path.dirname(handler_module_path))
         package = os.path.abspath(os.path.dirname(handler_module_path))
 
