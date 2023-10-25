@@ -43,10 +43,10 @@ class LambdaImporter:
         package = os.path.abspath(os.path.dirname(handler_module_path))
 
         if package not in sys.path:
-            sys.path.append(package)
+            sys.path.insert(0, package)
 
         if is_nested_folder_structure and os.path.dirname(package) not in sys.path:
-            sys.path.append(os.path.dirname(package))
+            sys.path.insert(0, os.path.dirname(package))
 
         # We shoud also add the venv site-packages to the path
         venv = config.get("venv")
@@ -63,7 +63,7 @@ class LambdaImporter:
             )
 
         if os.path.exists(venv) and venv not in sys.path:
-            sys.path.append(venv)
+            sys.path.insert(0, venv)
 
         importlib.invalidate_caches()
         module_qualname = f"{package_name}.{module_name}"
