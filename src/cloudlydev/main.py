@@ -33,8 +33,9 @@ class LambdaImporter:
             root, function_path, project_name.lower(), module_name + ".py"
         )
 
-        # Check if the module is trule nested using the default poerty structure
-        if not os.path.exists(handler_module_path):
+        # Check if the module is truly nested using the default poerty structure
+        is_nested_folder_structure = os.path.exists(handler_module_path)
+        if not is_nested_folder_structure:
             # Use the flat folder structure
             handler_module_path = os.path.join(root, function_path, module_name + ".py")
 
@@ -42,27 +43,32 @@ class LambdaImporter:
         package = os.path.abspath(os.path.dirname(handler_module_path))
 
         if package not in sys.path:
-            sys.path.append( package)
+            sys.path.append(package)
 
-        if os.path.dirname(package) not in sys.path:
-            sys.path.append( os.path.dirname(package))
+        if is_nested_folder_structure and os.path.dirname(package) not in sys.path:
+            sys.path.append(os.path.dirname(package))
 
         # We shoud also add the venv site-packages to the path
         venv = config.get("venv")
         if not venv:
+            venv_dir = os.path.join(os.path.dirname(package), ".venv")
+            if not is_nested_folder_structure:
+                venv_dir = os.path.join(package, ".venv")
+
             venv = os.path.join(
-                os.path.dirname(package),
-                ".venv",
+                venv_dir,
                 "lib",
                 f"python{python_version}",
                 "site-packages",
             )
 
         if os.path.exists(venv) and venv not in sys.path:
-            sys.path.append( venv)
+            sys.path.append(venv)
 
         importlib.invalidate_caches()
         module_qualname = f"{package_name}.{module_name}"
+        if not is_nested_folder_structure:
+            module_qualname = module_name
         module = importlib.import_module(module_qualname, package=package)
         fn = getattr(module, func_name)
 
@@ -82,11 +88,10 @@ class DevServer:
         self._old_path = sys.path
         self._old_modules = sys.modules
 
-        try:
-            # map routes
-            lambda_importer = LambdaImporter()
-            print("Mapping routes... from ", kwargs["config"])
-            for route in self._config["routes"]:
+        lambda_importer = LambdaImporter()
+        print("Mapping routes... from ", kwargs["config"])
+        for route in self._config["routes"]:
+            try:
                 http_method = route.get("method", "GET")
                 handler = lambda_importer.load_handler(
                     route,
@@ -99,8 +104,8 @@ class DevServer:
                     callback=self._bind_to_lambda(handler),
                 )
                 print(f"Mapped {http_method} {route['url']} to {handler.__name__}")
-        except Exception as e:
-            print("ERROR", e)
+            except Exception as e:
+                print("ERROR", e)
 
     def run(self):
         self._app.route("/", "GET", self.handle_request)
